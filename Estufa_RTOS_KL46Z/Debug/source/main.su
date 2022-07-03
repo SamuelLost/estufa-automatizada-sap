@@ -1,0 +1,12 @@
+../source/main.c:107:6:ADC0_init	8	static
+../source/main.c:117:5:main	32	static
+../source/main.c:187:6:taskTemperature	48	static
+../source/main.c:226:6:taskHumidity	40	static
+../source/main.c:241:6:taskLcd	64	static
+../source/main.c:279:6:taskMenu	16	static
+../source/main.c:287:6:sysStartupScreen	8	static
+../source/main.c:296:6:sysComponentsInit	8	static
+../source/main.c:302:6:sysLcdInit	48	static
+../source/main.c:345:6:sysAdcInit	8	static
+../source/main.c:359:6:taskControlLed	16	static
+../source/main.c:366:6:sysPwmInit	8	static

@@ -1,0 +1,12 @@
+../source/kl46z/port.c:27:6:portPinNumberValidate	16	static
+../source/kl46z/port.c:31:6:portPortValidate	16	static
+../source/kl46z/port.c:35:6:portPinValidate	16	static
+../source/kl46z/port.c:43:6:portInitPort	16	static
+../source/kl46z/port.c:50:6:portSetPinMux	32	static
+../source/kl46z/port.c:60:6:portSetMux	24	static
+../source/kl46z/port.c:67:6:portSetMuxGpio	16	static
+../source/kl46z/port.c:71:6:portConfigInterrupt	24	static
+../source/kl46z/port.c:93:6:portConfigPullup	24	static
+../source/kl46z/port.c:103:6:portCheckInterrupt	24	static
+../source/kl46z/port.c:112:6:portClearInterrupt	24	static
+../source/kl46z/port.c:121:12:portGetPinPort	16	static

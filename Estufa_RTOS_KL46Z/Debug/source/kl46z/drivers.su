@@ -1,0 +1,10 @@
+../source/kl46z/drivers.c:41:6:drvLedInit	8	static
+../source/kl46z/drivers.c:57:6:drvButtonInit	8	static
+../source/kl46z/drivers.c:74:6:drvLedSet	24	static
+../source/kl46z/drivers.c:97:18:drvCheckButtonLevel	24	static
+../source/kl46z/drivers.c:109:6:drvCheckButtonPressed	16	static
+../source/kl46z/drivers.c:119:6:drvButtonIntEnable	24	static
+../source/kl46z/drivers.c:132:6:drvButtonIntClear	24	static
+../source/kl46z/drivers.c:141:6:drvButtonIntCheck	24	static
+../source/kl46z/drivers.c:155:16:drvGetLed	16	static
+../source/kl46z/drivers.c:167:16:drvGetButton	16	static

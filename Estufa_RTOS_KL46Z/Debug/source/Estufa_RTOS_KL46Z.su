@@ -1,0 +1,10 @@
+../source/Estufa_RTOS_KL46Z.c:107:5:main	32	static
+../source/Estufa_RTOS_KL46Z.c:151:6:taskTemperature	32	static
+../source/Estufa_RTOS_KL46Z.c:171:6:taskHumidity	32	static
+../source/Estufa_RTOS_KL46Z.c:184:6:taskLcd	64	static
+../source/Estufa_RTOS_KL46Z.c:221:6:taskMenu	16	static
+../source/Estufa_RTOS_KL46Z.c:229:6:sysStartupScreen	8	static
+../source/Estufa_RTOS_KL46Z.c:238:6:sysComponentsInit	8	static
+../source/Estufa_RTOS_KL46Z.c:244:6:sysLcdInit	48	static
+../source/Estufa_RTOS_KL46Z.c:287:6:sysAdcInit	8	static
+../source/Estufa_RTOS_KL46Z.c:301:6:sysPwmInit	8	static

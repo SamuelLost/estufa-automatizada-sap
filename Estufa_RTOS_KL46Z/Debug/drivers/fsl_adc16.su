@@ -1,0 +1,14 @@
+../drivers/fsl_clock.h:601:20:CLOCK_EnableClock	24	static
+../drivers/fsl_clock.h:612:20:CLOCK_DisableClock	24	static
+../drivers/fsl_adc16.c:67:17:ADC16_GetInstance	24	static
+../drivers/fsl_adc16.c:85:6:ADC16_Init	24	static
+../drivers/fsl_adc16.c:141:6:ADC16_Deinit	16	static
+../drivers/fsl_adc16.c:149:6:ADC16_GetDefaultConfig	16	static
+../drivers/fsl_adc16.c:165:10:ADC16_DoAutoCalibration	32	static
+../drivers/fsl_adc16.c:223:6:ADC16_SetChannelMuxMode	16	static
+../drivers/fsl_adc16.c:236:6:ADC16_SetHardwareCompareConfig	24	static
+../drivers/fsl_adc16.c:273:6:ADC16_SetHardwareAverage	24	static
+../drivers/fsl_adc16.c:320:10:ADC16_GetStatusFlags	24	static
+../drivers/fsl_adc16.c:337:6:ADC16_ClearStatusFlags	16	static
+../drivers/fsl_adc16.c:347:6:ADC16_SetChannelConfig	32	static
+../drivers/fsl_adc16.c:369:10:ADC16_GetChannelStatusFlags	24	static

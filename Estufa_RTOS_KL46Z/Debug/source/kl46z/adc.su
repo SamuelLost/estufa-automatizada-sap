@@ -1,0 +1,4 @@
+../source/kl46z/adc.c:7:6:adcReadInput	16	static
+../source/kl46z/adc.c:13:6:adcGetDefaultConfig	16	static
+../source/kl46z/adc.c:21:6:adcInitModule	16	static
+../source/kl46z/adc.c:39:6:adcCalibration	16	static

@@ -1,0 +1,16 @@
+../source/kl46z/lcd.c:148:6:lcdInitPinsModule	16	static
+../source/kl46z/lcd.c:158:6:lcdInitModule	16	static
+../source/kl46z/lcd.c:171:6:lcdClearDisplay	16	static
+../source/kl46z/lcd.c:176:6:lcdSetCursor	24	static
+../source/kl46z/lcd.c:184:6:lcdWriteString	24	static
+../source/kl46z/lcd.c:190:6:lcdWriteChar	16	static
+../source/kl46z/lcd.c:194:6:lcdReturnCursor	16	static
+../source/kl46z/lcd.c:198:6:lcdScrollLeft	16	static
+../source/kl46z/lcd.c:202:6:lcdScrollRight	16	static
+../source/kl46z/lcd.c:207:6:lcdCreateChar	32	static
+../source/kl46z/lcd.c:219:6:lcdCreateBigNumbers	24	static
+../source/kl46z/lcd.c:227:6:lcdWriteBigNumber	16	static
+../source/kl46z/lcd.c:242:6:lcdSendCommand	16	static
+../source/kl46z/lcd.c:261:6:lcdSendData	16	static
+../source/kl46z/lcd.c:272:6:lcdSendBits	24	static
+../source/kl46z/lcd.c:279:6:lcdEnablePulse	16	static

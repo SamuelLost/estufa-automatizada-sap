@@ -1,0 +1,2 @@
+../source/kl46z/delay.c:9:6:delay_ms	24	static
+../source/kl46z/delay.c:21:6:delay_us	24	static
