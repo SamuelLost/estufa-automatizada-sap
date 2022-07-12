@@ -10,7 +10,6 @@ RM := rm -rf
 -include sources.mk
 -include utilities/subdir.mk
 -include startup/subdir.mk
--include source/system/subdir.mk
 -include source/kl46z/subdir.mk
 -include source/subdir.mk
 -include freertos/portable/subdir.mk

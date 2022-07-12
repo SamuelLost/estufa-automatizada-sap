@@ -6,7 +6,7 @@
  * Generated linker script file for MKL46Z256xxx4
  * Created from linkscript.ldt by FMCreateLinkLibraries
  * Using Freemarker v2.3.30
- * MCUXpresso IDE v11.5.1 [Build 7266] [2022-04-13] on 12 de jul de 2022 15:09:39
+ * MCUXpresso IDE v11.5.1 [Build 7266] [2022-04-13] on 12 de jul de 2022 16:51:14
  */
 
 INCLUDE "Estufa_RTOS_KL46Z_Debug_library.ld"

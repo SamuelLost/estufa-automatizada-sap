@@ -23,7 +23,6 @@ drivers \
 freertos/portable \
 source/kl46z \
 source \
-source/system \
 startup \
 utilities \
 

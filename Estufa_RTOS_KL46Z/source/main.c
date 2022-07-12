@@ -37,17 +37,7 @@ typedef enum {
 
 orientation pwm_orientation;
 
-// ================================================================================
-// SEMAPHORES
-// ================================================================================
-
-xSemaphoreHandle pwmMutex;
-
 xSemaphoreHandle buttonSemaphore;
-
-// ================================================================================
-// PIN HANDLERS
-// ================================================================================
 
 pin_handler_t relay;
 
@@ -121,6 +111,10 @@ void sysAdcInit(void);
 
 void sysPwmInit(void);
 
+void sysButtonsInit(void);
+
+void sysRelayInit(void);
+
 // ================================================================================
 // TASKS PROTOTYPES
 // ================================================================================
@@ -139,49 +133,21 @@ void taskControlLed(void *pvParameters);
 // MAIN CODE
 // ================================================================================
 
-void initButtons(){
-	sw1.port = pinPORT_A;
-	sw1.pin = 5;
-	gpioPinInit(&sw1, gpioINPUT);
-
-	sw2.port = pinPORT_A;
-	sw2.pin = 12;
-	gpioPinInit(&sw2, gpioINPUT);
-
-	// Config Interrupt for the Buttons (Interrupt in rising Edge)
-	portConfigInterrupt(&sw1, portINT_RISING_EDGE);
-	portConfigInterrupt(&sw2, portINT_RISING_EDGE);
-
-	relay.port = pinPORT_E;
-	relay.pin = 31;
-	gpioPinInit(&led, gpioOUTPUT);
-
-	// Create Semaphore
-	vSemaphoreCreateBinary(buttonSemaphore);
-	xSemaphoreTake(buttonSemaphore, 0);
-
-	// Create Mutex
-	pwmMutex = xSemaphoreCreateMutex();
-
-	pwm_orientation = INCREASE;
-}
-
 void PORTA_IRQHandler() {
+	delay_ms(30);
 
-	for(int i = 0; i < 30; i++) {
-		for(int j = 0; j < 7000; j++);
-	}
+	UBaseType_t uxSavedInterruptStatus;
 
 	if(portCheckInterrupt(&sw1)) {
-		xSemaphoreTake(pwmMutex, portMAX_DELAY);
+		uxSavedInterruptStatus = taskENTER_CRITICAL_FROM_ISR();
 		pwm_orientation = INCREASE;
-		xSemaphoreGive(pwmMutex);
+		taskEXIT_CRITICAL_FROM_ISR(uxSavedInterruptStatus);
 	}
 
 	if(portCheckInterrupt(&sw2)) {
-		xSemaphoreTake(pwmMutex, portMAX_DELAY);
+		uxSavedInterruptStatus = taskENTER_CRITICAL_FROM_ISR();
 		pwm_orientation = DECREASE;
-		xSemaphoreGive(pwmMutex);
+		taskEXIT_CRITICAL_FROM_ISR(uxSavedInterruptStatus);
 	}
 
 	portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
@@ -202,8 +168,6 @@ int main(void) {
 	sysComponentsInit();
 	sysStartupScreen();
 
-	//	sysAdcInit();
-	//	sysPwmInit();
 	QueueHandle_t sensor_queue = xQueueCreate(SENSOR_QUANTITY, sizeof(sensor_handle_t));
 	if(buttonSemaphore != NULL) {
 
@@ -259,15 +223,16 @@ int main(void) {
 void taskTemperature(void *pvParameters) {
 	QueueHandle_t sensor_queue = (QueueHandle_t) pvParameters;
 
+	long temperature;
 	sensor_handle_t sensor;
 	sensor.id = sensorTEMPERATURE;
 
 	while(1) {
 		while(!adcCalibration());
 
-		float temperature = (int) ((adcReadInput(temperature_sensor.channel)*330.0)/65536.0);
+		temperature = (adcReadInput(temperature_sensor.channel)*330.0)/65536.0;
 
-		if((int) temperature > 30) {
+		if(temperature > 30) {
 			gpioPinWrite(&relay, gpioHIGH);
 		}
 		else{
@@ -317,6 +282,7 @@ void taskLcd(void *pvParameters) {
 				lcdWriteString(&lcd, "%");
 				break;
 			case sensorTEMPERATURE:
+				PRINTF("TEMPERATURE: %d\n\r", sensors[i].value);
 				lcdClearDisplay(&lcd);
 				lcdSetCursor(&lcd, 0, 0);
 				lcdWriteString(&lcd, "Temp. : ");
@@ -325,9 +291,9 @@ void taskLcd(void *pvParameters) {
 				lcdWriteString(&lcd, "C");
 				break;
 			}
-			delay_ms(500);
+			delay_ms(250);
 		}
-		vTaskDelay(1000/portTICK_RATE_MS);
+		vTaskDelay(500/portTICK_RATE_MS);
 	}
 }
 
@@ -335,7 +301,7 @@ void taskControlLed(void *pvParameters){
 	while(1){
 		xSemaphoreTake(buttonSemaphore, portMAX_DELAY);
 
-		xSemaphoreTake(pwmMutex, portMAX_DELAY);
+		taskENTER_CRITICAL();
 
 		if(pwm_orientation == INCREASE) {
 			pwm += 81;
@@ -352,9 +318,9 @@ void taskControlLed(void *pvParameters){
 			TPM2->CONTROLS[0].CnV = pwm;
 		}
 
-		xSemaphoreGive(pwmMutex);
+		taskEXIT_CRITICAL();
 
-		vTaskDelay(100 / portTICK_RATE_MS);
+		vTaskDelay(100/portTICK_RATE_MS);
 	}
 }
 
@@ -375,7 +341,27 @@ void sysComponentsInit(void) {
 	sysLcdInit();
 	sysAdcInit();
 	sysPwmInit();
-	initButtons();
+	sysButtonsInit();
+	sysRelayInit();
+}
+
+void sysButtonsInit(void) {
+	sw1.port = pinPORT_A;
+	sw1.pin = 5;
+	gpioPinInit(&sw1, gpioINPUT);
+
+	sw2.port = pinPORT_A;
+	sw2.pin = 12;
+	gpioPinInit(&sw2, gpioINPUT);
+
+	portConfigInterrupt(&sw1, portINT_RISING_EDGE);
+	portConfigInterrupt(&sw2, portINT_RISING_EDGE);
+}
+
+void sysRelayInit(void) {
+	relay.port = pinPORT_E;
+	relay.pin = 31;
+	gpioPinInit(&relay, gpioOUTPUT);
 }
 
 void sysLcdInit(void) {
@@ -436,6 +422,12 @@ void sysAdcInit(void) {
 }
 
 void sysPwmInit(void) {
+	// Create Semaphore
+	vSemaphoreCreateBinary(buttonSemaphore);
+	xSemaphoreTake(buttonSemaphore, 0);
+
+	pwm_orientation = INCREASE;
+
 	SIM->SCGC5 |= (1 << 10); // Ativar clock porta B
 
 	PORTB->PCR[2] |= (1 << 24) |		// ISF=PORTB_PCR18[24]: w1c (limpa a pendência)
