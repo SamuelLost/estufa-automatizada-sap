@@ -10,6 +10,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
+#include "semphr.h"
 
 #include <stdio.h>
 #include "board.h"
@@ -23,7 +24,32 @@
 #include "kl46z/delay.h"
 #include "kl46z/gpio.h"
 
-pin_handler_t led;
+// ================================================================================
+// CONTROL GLOBAL VARIABLES
+// ================================================================================
+
+int32_t pwm = 0;
+
+typedef enum {
+	INCREASE,
+	DECREASE
+} orientation;
+
+orientation pwm_orientation;
+
+// ================================================================================
+// SEMAPHORES
+// ================================================================================
+
+xSemaphoreHandle pwmMutex;
+
+xSemaphoreHandle buttonSemaphore;
+
+// ================================================================================
+// PIN HANDLERS
+// ================================================================================
+
+pin_handler_t relay;
 
 pin_handler_t sw1;
 
@@ -113,17 +139,6 @@ void taskControlLed(void *pvParameters);
 // MAIN CODE
 // ================================================================================
 
-void ADC0_init(void) {
-	SIM->SCGC5 |= (1 << 10); /* clock to PORTE */
-	PORTB->PCR[1] |= 0; /* PTB1 analog input */
-
-	SIM->SCGC6 |= 0x8000000; /* clock to ADC0 */
-	ADC0->SC2 &= ~0x40; /* software trigger */
-	ADC0->SC3 |= 0x07; /* 32 samples average */
-	/* clock div by 4, long sample time, single ended 16 bit, bus clock */
-	ADC0->CFG1 = 0x40 | 0x10 | 0x0C | 0x00;
-}
-
 void initButtons(){
 	sw1.port = pinPORT_A;
 	sw1.pin = 5;
@@ -137,37 +152,42 @@ void initButtons(){
 	portConfigInterrupt(&sw1, portINT_RISING_EDGE);
 	portConfigInterrupt(&sw2, portINT_RISING_EDGE);
 
-	led.port = pinPORT_E;
-	led.pin = 29;
+	relay.port = pinPORT_E;
+	relay.pin = 31;
 	gpioPinInit(&led, gpioOUTPUT);
+
+	// Create Semaphore
+	vSemaphoreCreateBinary(buttonSemaphore);
+	xSemaphoreTake(buttonSemaphore, 0);
+
+	// Create Mutex
+	pwmMutex = xSemaphoreCreateMutex();
+
+	pwm_orientation = INCREASE;
 }
 
-int32_t pwm = 0;
-
 void PORTA_IRQHandler() {
-	printf("Interrup\r\n");
+
 	for(int i = 0; i < 30; i++) {
 		for(int j = 0; j < 7000; j++);
 	}
+
 	if(portCheckInterrupt(&sw1)) {
-		printf("Botao 1\r\n");
-		pwm += 81;
-		if(pwm > 819) {
-			pwm = 819;
-		}
-		TPM2->CONTROLS[0].CnV = pwm;
-		portClearInterrupt(&sw1);
+		xSemaphoreTake(pwmMutex, portMAX_DELAY);
+		pwm_orientation = INCREASE;
+		xSemaphoreGive(pwmMutex);
 	}
 
 	if(portCheckInterrupt(&sw2)) {
-		printf("Botao 2\r\n");
-		pwm -= 81;
-		if(pwm < 0) {
-			pwm = 0;
-		}
-		TPM2->CONTROLS[0].CnV = pwm;
-		portClearInterrupt(&sw2);
+		xSemaphoreTake(pwmMutex, portMAX_DELAY);
+		pwm_orientation = DECREASE;
+		xSemaphoreGive(pwmMutex);
 	}
+
+	portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+	xSemaphoreGiveFromISR(buttonSemaphore, &xHigherPriorityTaskWoken);
+	portEND_SWITCHING_ISR(xHigherPriorityTaskWoken);
+
 }
 
 int main(void) {
@@ -185,53 +205,51 @@ int main(void) {
 	//	sysAdcInit();
 	//	sysPwmInit();
 	QueueHandle_t sensor_queue = xQueueCreate(SENSOR_QUANTITY, sizeof(sensor_handle_t));
+	if(buttonSemaphore != NULL) {
 
-	xTaskCreate(taskTemperature,
-			"TaskTemperature",
-			configMINIMAL_STACK_SIZE,
-			sensor_queue,
-			1,
-			&temperature_task);
-
-	xTaskCreate(taskHumidity,
-				"TaskHumidity",
+		xTaskCreate(taskTemperature,
+				"TaskTemperature",
 				configMINIMAL_STACK_SIZE,
 				sensor_queue,
 				1,
-				&humidity_task);
+				&temperature_task);
 
-	xTaskCreate(taskLcd,
-			"TaskLcd",
-			configMINIMAL_STACK_SIZE * 4,
-			sensor_queue,
-			1,
-			&lcd_task);
+		xTaskCreate(taskHumidity,
+					"TaskHumidity",
+					configMINIMAL_STACK_SIZE,
+					sensor_queue,
+					1,
+					&humidity_task);
 
-//	xTaskCreate(taskMenu,
-//				"TaskMenu",
-//				configMINIMAL_STACK_SIZE,
-//				(void *) sensor_queue,
-//				1,
-//				&menu_task);
+		xTaskCreate(taskLcd,
+				"TaskLcd",
+				configMINIMAL_STACK_SIZE * 4,
+				sensor_queue,
+				1,
+				&lcd_task);
 
-//	xTaskCreate(taskControlLed,
-//			"TaskPWM",
-//			configMINIMAL_STACK_SIZE,
-//			NULL,
-//			1,
-//			NULL);
-	vTaskStartScheduler();
-	while(1) {
-		//		ADC0->SC1[0] = 9; /* start conversion on channel 0 */
-		//		while(!(ADC0->SC1[0] & 0x80)) { } /* wait for COCO */
-		//		result = ADC0->R[0]; /* read conversion result and clear COCO flag */
-		//		//		temperature = result * 330.0 / 65536; /* convert voltage to temperature */
-		//		//		printf("\r\nTemp = %6.2dC", temperature); /* convert to string */
-		//
-		//		float temperature = result * 330.0 / 65536;
-		//
-		//		printf("Temperatura %d C\r\n", (int) temperature);
+		xTaskCreate(taskControlLed,
+				"TaskPWM",
+				configMINIMAL_STACK_SIZE,
+				NULL,
+				1,
+				NULL);
+
+		vTaskStartScheduler();
+
+		while(1) {
+			//		ADC0->SC1[0] = 9; /* start conversion on channel 0 */
+			//		while(!(ADC0->SC1[0] & 0x80)) { } /* wait for COCO */
+			//		result = ADC0->R[0]; /* read conversion result and clear COCO flag */
+			//		//		temperature = result * 330.0 / 65536; /* convert voltage to temperature */
+			//		//		printf("\r\nTemp = %6.2dC", temperature); /* convert to string */
+			//
+			//		float temperature = result * 330.0 / 65536;
+			//
+			//		printf("Temperatura %d C\r\n", (int) temperature);
+		}
 	}
+	return 0;
 }
 
 // ================================================================================
@@ -243,42 +261,23 @@ void taskTemperature(void *pvParameters) {
 
 	sensor_handle_t sensor;
 	sensor.id = sensorTEMPERATURE;
-	SIM->SCGC5 |= (1 << 13);
-	PORTE->PCR[31] |= (1 << 8);
-	GPIOE->PDDR |= (1 << 31);
-	while(1) {
 
-//		bool flag = false;
-//		ADC0->SC1[0] = 9;  //start conversion on channel 0
-//		do {
-//			flag = adcCalibration();
-//		} while(flag == false);
-//
+	while(1) {
+		while(!adcCalibration());
+
 		float temperature = (int) ((adcReadInput(temperature_sensor.channel)*330.0)/65536.0);
 
-
-		//		while(!(ADC0->SC1[0] & 0x80)) { } /* wait for COCO */
-		//		result = ADC0->R[0]; /* read conversion result and clear COCO flag */
-		//		temperature = result * 330.0 / 65536; /* convert voltage to temperature */
-		//		printf("\r\nTemp = %6.2dC", temperature); /* convert to string */
-
-		//		float temperature = result * 330.0 / 65536;
-
 		if((int) temperature > 30) {
-			GPIOE->PSOR |= (1 << 31);
-			//			printf("Cooler ligado!\n\r");
-			//			delay_ms(500);
-		} else{
-			GPIOE->PCOR |= (1 << 31);
-			//			printf("Cooler desligado!\n\r");
-			//			delay_ms(500);
+			gpioPinWrite(&relay, gpioHIGH);
 		}
+		else{
+			gpioPinWrite(&relay, gpioLOW);
+		}
+
 		sensor.value = (int) temperature;
 		xQueueSendToBack(sensor_queue, &sensor, portMAX_DELAY);
-		//		printf("Temperatura %d ºC\r\n", (int) temperature);
-		//		delay_ms(1000);
+
 		vTaskDelay(100/portTICK_RATE_MS);
-		//		vTaskDelay(1000/portTICK_RATE_MS);
 	}
 }
 
@@ -332,8 +331,31 @@ void taskLcd(void *pvParameters) {
 	}
 }
 
-void taskSwitches(void *pvParameters) {
-	while(1);
+void taskControlLed(void *pvParameters){
+	while(1){
+		xSemaphoreTake(buttonSemaphore, portMAX_DELAY);
+
+		xSemaphoreTake(pwmMutex, portMAX_DELAY);
+
+		if(pwm_orientation == INCREASE) {
+			pwm += 81;
+			if(pwm > 819) {
+				pwm = 819;
+			}
+			TPM2->CONTROLS[0].CnV = pwm;
+		}
+		else {
+			pwm -= 81;
+			if(pwm < 0) {
+				pwm = 0;
+			}
+			TPM2->CONTROLS[0].CnV = pwm;
+		}
+
+		xSemaphoreGive(pwmMutex);
+
+		vTaskDelay(100 / portTICK_RATE_MS);
+	}
 }
 
 // ================================================================================
@@ -413,13 +435,6 @@ void sysAdcInit(void) {
 	while(!adcCalibration());
 }
 
-void taskControlLed(void *pvParameters){
-	while(1){
-		TPM2->CONTROLS[0].CnV = 655;
-		vTaskDelay(100 / portTICK_RATE_MS);
-	}
-}
-
 void sysPwmInit(void) {
 	SIM->SCGC5 |= (1 << 10); // Ativar clock porta B
 
@@ -456,47 +471,3 @@ void sysPwmInit(void) {
 			(1 << 3) | // ELSB=TPM2_C0SC[3]=0
 			(0 << 2);  // ELSA=TPM2_C0SC[2]=0
 }
-//
-//200Hz tem modulo de 819
-//
-//Para 6:00
-//10% de duty cycle tem modulo de 81
-//
-//Para 8:00
-//20% de duty cycle tem modulo de 163
-//
-//Para 9:00
-//40% de duty cycle tem modulo de 327
-//
-//Para 10:00
-//50% de duty cycle tem modulo de 409
-//
-//Para 11:00
-//60% de duty cycle tem modulo de 491
-//
-//Para 12:00
-//70% duty cycle tem modulo de 573
-//
-//Para 12:30
-//90% de duty cycle tem modulo de 737
-//
-//Para 13:00
-//80% de duty cycle tem modulo de 655
-//
-//Para 14:00
-//60% de duty cycle tem modulo de 491
-//
-//Para 15:00
-//50% de duty cycle tem modulo de 409
-//
-//Para 16:00
-//40% de duty cycle tem modulo de 327
-//
-//Para 17:00
-//20% de duty cycle tem modulo de 163
-//
-//Para 17:30
-//5% de duty cycle tem modulo de 40
-//
-//Para 18:00
-//0% de duty cycle tem modulo de 0

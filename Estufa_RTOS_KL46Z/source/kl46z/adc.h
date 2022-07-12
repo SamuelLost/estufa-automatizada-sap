@@ -28,13 +28,7 @@ typedef enum {
 	adcCHANNEL_0,
 	adcCHANNEL_1,
 	adcCHANNEL_2,
-	adcCHANNEL_3,
-	adcCHANNEL_4,
-	adcCHANNEL_5,
-	adcCHANNEL_6,
-	adcCHANNEL_7,
-	adcCHANNEL_8,
-	adcCHANNEL_9
+	adcCHANNEL_3
 } adc_channel;
 
 typedef struct {
