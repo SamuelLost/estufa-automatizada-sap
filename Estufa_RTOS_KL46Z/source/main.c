@@ -333,7 +333,7 @@ void sysStartupScreen(void) {
 	lcdSetCursor(&lcd, 0, 0);
 	lcdWriteString(&lcd, "   Controle de");
 	lcdSetCursor(&lcd, 1, 0);
-	lcdWriteString(&lcd, "   Estufa v1.3");
+	lcdWriteString(&lcd, "   Estufa v1.5");
 	delay_ms(1000);
 }
 
