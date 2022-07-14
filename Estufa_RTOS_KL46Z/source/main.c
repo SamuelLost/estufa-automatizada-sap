@@ -98,7 +98,7 @@ TaskHandle_t temperature_task;
 TaskHandle_t menu_task;
 
 // ================================================================================
-// FUNCTION PROTOTYPES
+// SYSTEM FUNCTION PROTOTYPES
 // ================================================================================
 
 void sysComponentsInit(void);
@@ -119,18 +119,16 @@ void sysRelayInit(void);
 // TASKS PROTOTYPES
 // ================================================================================
 
-void taskMenu(void *pvParameters);
+void vTaskHumidity(void *pvParameters);
 
-void taskHumidity(void *pvParameters);
+void vTaskTemperature(void *pvParameters);
 
-void taskTemperature(void *pvParameters);
+void vTaskLcd(void *pvParameters);
 
-void taskLcd(void *pvParameters);
-
-void taskControlLed(void *pvParameters);
+void vTaskControllLed(void *pvParameters);
 
 // ================================================================================
-// MAIN CODE
+// PWM CONTROL BUTTONS ISR
 // ================================================================================
 
 void PORTA_IRQHandler() {
@@ -156,43 +154,41 @@ void PORTA_IRQHandler() {
 
 }
 
+// ================================================================================
+// MAIN CODE
+// ================================================================================
+
 int main(void) {
 
-	BOARD_InitBootPins();
-	BOARD_InitBootClocks();
-	BOARD_InitBootPeripherals();
-#ifndef BOARD_INIT_DEBUG_CONSOLE_PERIPHERAL
-	/* Init FSL debug console. */
-	BOARD_InitDebugConsole();
-#endif
 	sysComponentsInit();
+	
 	sysStartupScreen();
 
 	QueueHandle_t sensor_queue = xQueueCreate(SENSOR_QUANTITY, sizeof(sensor_handle_t));
 	if(buttonSemaphore != NULL) {
 
-		xTaskCreate(taskTemperature,
-				"TaskTemperature",
+		xTaskCreate(vTaskTemperature,
+				"vTaskTemperature",
 				configMINIMAL_STACK_SIZE,
 				sensor_queue,
 				1,
 				&temperature_task);
 
-		xTaskCreate(taskHumidity,
-					"TaskHumidity",
+		xTaskCreate(vTaskHumidity,
+					"vTaskHumidity",
 					configMINIMAL_STACK_SIZE,
 					sensor_queue,
 					1,
 					&humidity_task);
 
-		xTaskCreate(taskLcd,
-				"TaskLcd",
+		xTaskCreate(vTaskLcd,
+				"vTaskLcd",
 				configMINIMAL_STACK_SIZE * 4,
 				sensor_queue,
 				1,
 				&lcd_task);
 
-		xTaskCreate(taskControlLed,
+		xTaskCreate(vTaskControllLed,
 				"TaskPWM",
 				configMINIMAL_STACK_SIZE,
 				NULL,
@@ -210,7 +206,7 @@ int main(void) {
 // TASKS IMPLEMENTATION
 // ================================================================================
 
-void taskTemperature(void *pvParameters) {
+void vTaskTemperature(void *pvParameters) {
 	QueueHandle_t sensor_queue = (QueueHandle_t) pvParameters;
 
 	long temperature;
@@ -236,7 +232,7 @@ void taskTemperature(void *pvParameters) {
 	}
 }
 
-void taskHumidity(void *pvParameters) {
+void vTaskHumidity(void *pvParameters) {
 	QueueHandle_t sensor_queue = (QueueHandle_t) pvParameters;
 
 	sensor_handle_t sensor;
@@ -249,7 +245,7 @@ void taskHumidity(void *pvParameters) {
 	}
 }
 
-void taskLcd(void *pvParameters) {
+void vTaskLcd(void *pvParameters) {
 	QueueHandle_t sensor_queue = (QueueHandle_t) pvParameters;
 
 	sensor_handle_t sensors[SENSOR_QUANTITY];
@@ -287,7 +283,7 @@ void taskLcd(void *pvParameters) {
 	}
 }
 
-void taskControlLed(void *pvParameters){
+void vTaskControllLed(void *pvParameters){
 	while(1){
 		xSemaphoreTake(buttonSemaphore, portMAX_DELAY);
 
@@ -315,7 +311,7 @@ void taskControlLed(void *pvParameters){
 }
 
 // ================================================================================
-// FUNCTION IMPLEMENTATION
+// SYSTEM FUNCTION IMPLEMENTATION
 // ================================================================================
 
 void sysStartupScreen(void) {
@@ -418,38 +414,25 @@ void sysPwmInit(void) {
 
 	pwm_orientation = INCREASE;
 
-	SIM->SCGC5 |= (1 << 10); // Ativar clock porta B
+	SIM->SCGC5 |= (1 << 10);
 
-	PORTB->PCR[2] |= (1 << 24) |		// ISF=PORTB_PCR18[24]: w1c (limpa a pendência)
-			(0b011 << 8);   // MUX=PORTB_PCR18[10:8]=0b011 (TPM2_CH0)
+	PORTB->PCR[2] |= (0b011 << 8);
+	
 	GPIOB->PDDR |= (1 << 2);
 
-	/*
-	 * 	System Clock Gating Control Register 6 (SIM_SCGC6)
-	 *|   31 | 30 |  29 | 28 |  27  |  26  |  25  |  24  |  23 | 22 -- 2 |    1   |  0  |
-	 *| DAC0 |  0 | RTC |  0 | ADC0 | TPM2 | TPM1 | TPM0 | PIT |    0    | DMAMUX | FTF |
-	 */
-	SIM->SCGC6 |= (1 << 26); // Habilitando o clock do TPM0
+	SIM->SCGC6 |= (1 << 26);
 
-	SIM->SOPT2 &= ~(1 << 16);	//0 MCGFLLCLK clock
+	SIM->SOPT2 &= ~(1 << 16);
 
 	SIM->SOPT2 |= (0b01 << 24);
 
 	TPM2->MOD = 819;
-	//	TPM2_REG->mod = 819;
 
-	TPM2->SC = 	(0 << 5)	|			// CPWMS=TPM2_SC[5]=0 (modo de contagem crescente)
-			(0b01 << 3)	|           // CMOD=TPM2_SC[4:3]=0b01 (incrementa a cada pulso do LPTPM)
-			(0b111 << 0);
+	TPM2->SC |= (0b111 << 0);
 
+	TPM2->CONTROLS[0].CnSC = 0;
 
-	TPM2->CONTROLS[0].CnSC = (0 << 5) | // MSB =TPM2_C0SC[5]=0
-			(0 << 4) | // MSA =TPM2_C0SC[4]=0
-			(0 << 3) | // ELSB=TPM2_C0SC[3]=0
-			(0 << 2);  // ELSA=TPM2_C0SC[2]=0
-
-	TPM2->CONTROLS[0].CnSC = (1 << 5) | // MSB =TPM2_C0SC[5]=0
-			(0 << 4) | // MSA =TPM2_C0SC[4]=0
-			(1 << 3) | // ELSB=TPM2_C0SC[3]=0
-			(0 << 2);  // ELSA=TPM2_C0SC[2]=0
+	TPM2->CONTROLS[0].CnSC |= (0b10 << 4) | (0b10 << 2);
+	
+	TPM2->SC |= (0b01 << 3);
 }
