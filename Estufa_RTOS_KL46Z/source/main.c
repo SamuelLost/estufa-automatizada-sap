@@ -119,15 +119,15 @@ void sysRelayInit(void);
 // TASKS PROTOTYPES
 // ================================================================================
 
-void taskMenu(void *pvParameters);
+void vTaskMenu(void *pvParameters);
 
-void taskHumidity(void *pvParameters);
+void vTaskHumidity(void *pvParameters);
 
-void taskTemperature(void *pvParameters);
+void vTaskTemperature(void *pvParameters);
 
-void taskLcd(void *pvParameters);
+void vTaskLcd(void *pvParameters);
 
-void taskControlLed(void *pvParameters);
+void vTaskControlLed(void *pvParameters);
 
 // ================================================================================
 // MAIN CODE
@@ -171,28 +171,28 @@ int main(void) {
 	QueueHandle_t sensor_queue = xQueueCreate(SENSOR_QUANTITY, sizeof(sensor_handle_t));
 	if(buttonSemaphore != NULL) {
 
-		xTaskCreate(taskTemperature,
-				"TaskTemperature",
+		xTaskCreate(vTaskTemperature,
+				"vTaskTemperature",
 				configMINIMAL_STACK_SIZE,
 				sensor_queue,
 				1,
 				&temperature_task);
 
-		xTaskCreate(taskHumidity,
-					"TaskHumidity",
+		xTaskCreate(vTaskHumidity,
+					"vTaskHumidity",
 					configMINIMAL_STACK_SIZE,
 					sensor_queue,
 					1,
 					&humidity_task);
 
-		xTaskCreate(taskLcd,
-				"TaskLcd",
+		xTaskCreate(vTaskLcd,
+				"vTaskLcd",
 				configMINIMAL_STACK_SIZE * 4,
 				sensor_queue,
 				1,
 				&lcd_task);
 
-		xTaskCreate(taskControlLed,
+		xTaskCreate(vTaskControlLed,
 				"TaskPWM",
 				configMINIMAL_STACK_SIZE,
 				NULL,
@@ -210,7 +210,7 @@ int main(void) {
 // TASKS IMPLEMENTATION
 // ================================================================================
 
-void taskTemperature(void *pvParameters) {
+void vTaskTemperature(void *pvParameters) {
 	QueueHandle_t sensor_queue = (QueueHandle_t) pvParameters;
 
 	long temperature;
@@ -236,7 +236,7 @@ void taskTemperature(void *pvParameters) {
 	}
 }
 
-void taskHumidity(void *pvParameters) {
+void vTaskHumidity(void *pvParameters) {
 	QueueHandle_t sensor_queue = (QueueHandle_t) pvParameters;
 
 	sensor_handle_t sensor;
@@ -249,7 +249,7 @@ void taskHumidity(void *pvParameters) {
 	}
 }
 
-void taskLcd(void *pvParameters) {
+void vTaskLcd(void *pvParameters) {
 	QueueHandle_t sensor_queue = (QueueHandle_t) pvParameters;
 
 	sensor_handle_t sensors[SENSOR_QUANTITY];
@@ -287,7 +287,7 @@ void taskLcd(void *pvParameters) {
 	}
 }
 
-void taskControlLed(void *pvParameters){
+void vTaskControlLed(void *pvParameters){
 	while(1){
 		xSemaphoreTake(buttonSemaphore, portMAX_DELAY);
 
