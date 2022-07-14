@@ -201,17 +201,7 @@ int main(void) {
 
 		vTaskStartScheduler();
 
-		while(1) {
-			//		ADC0->SC1[0] = 9; /* start conversion on channel 0 */
-			//		while(!(ADC0->SC1[0] & 0x80)) { } /* wait for COCO */
-			//		result = ADC0->R[0]; /* read conversion result and clear COCO flag */
-			//		//		temperature = result * 330.0 / 65536; /* convert voltage to temperature */
-			//		//		printf("\r\nTemp = %6.2dC", temperature); /* convert to string */
-			//
-			//		float temperature = result * 330.0 / 65536;
-			//
-			//		printf("Temperatura %d C\r\n", (int) temperature);
-		}
+		while(1) {}
 	}
 	return 0;
 }
